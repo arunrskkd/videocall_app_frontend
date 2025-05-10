@@ -36,16 +36,20 @@ const Dashboard = () => {
         </Toolbar>
       </AppBar>
 
-      <Container sx={{ py: 4 }}>
-        <Grid container spacing={4} alignItems="center">
-          <Grid item xs={12} md={6} mt={10}>
-            <Box sx={{ mb: 4 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 } }}>
+        <Grid container spacing={4} alignItems="center" justifyContent="center">
+          <Grid sx={{ 
+            width: { xs: '100%', md: '50%' },
+            mt: { xs: 4, md: 10 }
+          }}>
+            <Box sx={{ mb: 4, px: { xs: 2, md: 0 } }}>
               <Typography 
                 variant="h3" 
                 component="h1" 
                 sx={{ 
                   fontWeight: 'bold',
                   mb: 2,
+                  fontSize: { xs: '2rem', md: '3rem' },
                   background: 'linear-gradient(45deg, #90caf9 30%, #f48fb1 90%)',
                   backgroundClip: 'text',
                   textFillColor: 'transparent',
@@ -60,22 +64,28 @@ const Dashboard = () => {
                 component="h2" 
                 sx={{ 
                   mb: 4,
+                  fontSize: { xs: '1.2rem', md: '1.5rem' },
                   color: 'text.secondary',
                   fontWeight: 'medium'
                 }}
               >
                 Connect, collaborate and celebrate
               </Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 2,
+                flexDirection: { xs: 'column', sm: 'row' }
+              }}>
                 <Button
                   variant="outlined"
                   color="primary"
                   onClick={() => handleJoinRoom()}
+                  fullWidth
                   sx={{ 
                     borderRadius: 2,
                     px: 4,
                     py: 1.5,
-                    fontSize: '1.1rem'
+                    fontSize: { xs: '1rem', md: '1.1rem' }
                   }}
                 >
                   Join Existing Room
@@ -84,11 +94,12 @@ const Dashboard = () => {
                   variant="contained"
                   color="primary"
                   onClick={() => navigate('/room/create')}
+                  fullWidth
                   sx={{ 
                     borderRadius: 2,
                     px: 4,
                     py: 1.5,
-                    fontSize: '1.1rem'
+                    fontSize: { xs: '1rem', md: '1.1rem' }
                   }}
                 >
                   Create New Room

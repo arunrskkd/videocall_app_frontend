@@ -366,18 +366,21 @@ const RoomDetail = () => {
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ display: 'flex', height: 'calc(100vh - 64px)' }}>
+      <Box sx={{ display: 'flex', height: 'calc(100vh - 64px)', flexDirection: { xs: 'column', md: 'row' } }}>
         {/* Left Sidebar - Participants */}
         <Paper 
           elevation={3}
           sx={{ 
-            width: 280,
-            borderRadius: 0,
+            width: { xs: '100%', md: 280 },
+            height: { xs: 'auto', md: '100%' },
+            borderRadius: { xs: 2, md: 0 },
             background: isDarkMode 
               ? 'linear-gradient(145deg, #1e1e1e 0%, #2d2d2d 100%)'
               : 'linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%)',
-            borderRight: '1px solid',
+            borderRight: { xs: 'none', md: '1px solid' },
+            borderBottom: { xs: '1px solid', md: 'none' },
             borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+            mb: { xs: 2, md: 0 },
           }}
         >
           <Box sx={{ p: 2 }}>
@@ -416,7 +419,7 @@ const RoomDetail = () => {
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
-                    primary={user.userName}
+                    primary={user.userName === username ? 'You' : user.userName}
                     // secondary={`Joined: ${new Date(participant.joinedAt).toLocaleString()}`}
                     primaryTypographyProps={{
                       sx: { fontWeight: 500 }
@@ -428,65 +431,49 @@ const RoomDetail = () => {
           </Box>
         </Paper>
 
-        <Box sx={{ flexGrow: 1, p: 3, display: 'flex', flexDirection: 'column' }}>
-          <Grid container spacing={2} flexGrow={1}>
-            <Grid sx={{m:2, width: '50%'}}>
+        <Box sx={{ flexGrow: 1, p: { xs: 1, md: 3 }, display: 'flex', flexDirection: 'column' }}>
+          <Grid container spacing={{ xs: 1, md: 2 }} flexGrow={1}>
+            <Grid sx={{ 
+              m: { xs: 1, md: 2 }, 
+              width: '200px',
+              mb: { xs: 2, md: 0 }
+            }}>
               <Paper 
                 elevation={3}
                 sx={{ 
-                  width: '100%',
-                  height: '60vh',
+                  width:  '200px',
+                  height:  '150px',
                   borderRadius: 4,
+                  overflow:'hidden',
                   background: isDarkMode 
                     ? 'linear-gradient(145deg, #1e1e1e 0%, #2d2d2d 100%)'
                     : 'linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.3s',
-                  '&:hover': {
-                    transform: 'scale(1.01)',
-                    boxShadow: isDarkMode 
-                      ? '0 8px 32px rgba(0,0,0,0.3)'
-                      : '0 8px 32px rgba(0,0,0,0.1)',
-                  }
+
                 }}
               >
-                <Typography 
-                  variant="h6" 
-                  color="text.secondary"
-                  sx={{ 
-                    opacity: 0.7,
-                    fontWeight: 500
-                  }}
-                >
-                  <video ref={localVideoRef} autoPlay muted playsInline />
-                </Typography>
+               
+                  <video ref={localVideoRef} autoPlay muted playsInline width={"100%"}/>
+              
               </Paper>
             </Grid>
-            <Grid sx={{m:2, width: '50%'}}>
+            <Grid sx={{ 
+              m: { xs: 1, md: 2 }, 
+              width: '200px',
+            }}>
               <Paper 
                 elevation={3}
                 sx={{ 
-                  width: '100%',
-                  height: '60vh',
+                  width:  '200px',
+                  height:  '150px',
+                  overflow:'hidden',
                   borderRadius: 4,
                   background: isDarkMode 
                     ? 'linear-gradient(145deg, #1e1e1e 0%, #2d2d2d 100%)'
                     : 'linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.3s',
-                  '&:hover': {
-                    transform: 'scale(1.01)',
-                    boxShadow: isDarkMode 
-                      ? '0 8px 32px rgba(0,0,0,0.3)'
-                      : '0 8px 32px rgba(0,0,0,0.1)',
-                  }
+
                 }}
               >
-                <video ref={remoteVideoRef} autoPlay playsInline />
+                <video ref={remoteVideoRef} autoPlay playsInline width={"100%"}/>
               </Paper>
             </Grid>
           </Grid>
@@ -557,15 +544,18 @@ const RoomDetail = () => {
         <Paper 
           elevation={3}
           sx={{ 
-            width: 320,
-            borderRadius: 0,
+            width: { xs: '100%', md: 320 },
+            height: { xs: 'auto', md: '100%' },
+            borderRadius: { xs: 2, md: 0 },
             background: isDarkMode 
               ? 'linear-gradient(145deg, #1e1e1e 0%, #2d2d2d 100%)'
               : 'linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%)',
-            borderLeft: '1px solid',
+            borderLeft: { xs: 'none', md: '1px solid' },
+            borderTop: { xs: '1px solid', md: 'none' },
             borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
             display: 'flex',
             flexDirection: 'column',
+            mt: { xs: 2, md: 0 },
           }}
         >
           <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
@@ -607,7 +597,7 @@ const RoomDetail = () => {
                     mb: 0.5,
                   }}
                 >
-                  {message.userName} • {new Date(message.timestamp).toLocaleTimeString()}
+                  {message.userName  === username ? 'You' : message.userName} • {new Date(message.timestamp).toLocaleTimeString()}
                 </Typography>
                 <Paper
                   elevation={1}

@@ -80,13 +80,13 @@ const EnterRoom = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="sm" sx={{ py: 4 }}>
-        <Grid container spacing={4} alignItems="center">
-          <Grid item xs={12}>
+      <Container maxWidth="sm" sx={{ py: { xs: 2, md: 4 } }}>
+        <Grid container spacing={4} alignItems="center" justifyContent="center">
+          <Grid sx={{ width: '100%' }}>
             <Paper 
               elevation={3} 
               sx={{ 
-                p: 4,
+                p: { xs: 2, md: 4 },
                 borderRadius: 4,
                 background: isDarkMode 
                   ? 'linear-gradient(145deg, #1e1e1e 0%, #2d2d2d 100%)'
@@ -100,6 +100,7 @@ const EnterRoom = () => {
                   gutterBottom
                   sx={{ 
                     fontWeight: 'bold',
+                    fontSize: { xs: '1.8rem', md: '2.5rem' },
                     background: 'linear-gradient(45deg, #90caf9 30%, #f48fb1 90%)',
                     backgroundClip: 'text',
                     textFillColor: 'transparent',
@@ -112,50 +113,52 @@ const EnterRoom = () => {
                 <Typography 
                   variant="subtitle1" 
                   color="text.secondary"
-                  sx={{ mb: 4 }}
+                  sx={{ 
+                    mb: 4,
+                    fontSize: { xs: '1rem', md: '1.1rem' }
+                  }}
                 >
                   Enter your name and room ID to join
                 </Typography>
               </Box>
 
               <form onSubmit={handleSubmit(onSubmit)}>
-                <TextField
-                  fullWidth
-                  label="Your Name"
-                  {...register('username')}
-                  error={!!errors.username}
-                  helperText={errors.username?.message}
-                  margin="normal"
-                  variant="outlined"
-                  placeholder="Enter your name"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      '&:hover fieldset': {
-                        borderColor: 'primary.main',
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <TextField
+                    fullWidth
+                    label="Your Name"
+                    {...register('username')}
+                    error={!!errors.username}
+                    helperText={errors.username?.message}
+                    variant="outlined"
+                    placeholder="Enter your name"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&:hover fieldset': {
+                          borderColor: 'primary.main',
+                        },
                       },
-                    },
-                  }}
-                />
-                <TextField
-                  fullWidth
-                  label="Room ID"
-                  {...register('roomId')}
-                  error={!!errors.roomId}
-                  helperText={errors.roomId?.message}
-                  margin="normal"
-                  variant="outlined"
-                  placeholder="Enter room ID"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      '&:hover fieldset': {
-                        borderColor: 'primary.main',
+                    }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Room ID"
+                    {...register('roomId')}
+                    error={!!errors.roomId}
+                    helperText={errors.roomId?.message}
+                    variant="outlined"
+                    placeholder="Enter room ID"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&:hover fieldset': {
+                          borderColor: 'primary.main',
+                        },
                       },
-                    },
-                  }}
-                />
-                <Box sx={{ mt: 4 }}>
+                    }}
+                  />
+                  
                   <Button
                     variant="contained"
                     color="primary"
@@ -165,7 +168,7 @@ const EnterRoom = () => {
                     sx={{ 
                       borderRadius: 2,
                       py: 1.5,
-                      fontSize: '1.1rem',
+                      fontSize: { xs: '1rem', md: '1.1rem' },
                       textTransform: 'none',
                       boxShadow: '0 4px 14px 0 rgba(0,118,255,0.39)',
                       '&:hover': {
@@ -184,8 +187,7 @@ const EnterRoom = () => {
                     sx={{ 
                       borderRadius: 2,
                       py: 1.5,
-                      mt: 2,
-                      fontSize: '1.1rem',
+                      fontSize: { xs: '1rem', md: '1.1rem' },
                       textTransform: 'none'
                     }}
                   >
