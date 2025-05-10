@@ -122,15 +122,24 @@ const RoomDetail = () => {
 
     // Handle ICE candidates
     peerConnection.onicecandidate = (event) => {
-      console.log(`response from iceservers about public ip`)
-
       if (event.candidate) {
-        console.log(`public ip is sent to ${peerId}`)
-        socket.current.emit('ice-candidate', {
-          target: peerId,
-          candidate: event.candidate
-        });
+        // Only send the candidate if we're still gathering
+        if (peerConnection.iceGatheringState === 'gathering') {
+          console.log(`Sending ICE candidate to ${peerId}`);
+          socket.current.emit('ice-candidate', {
+            target: peerId,
+            candidate: event.candidate
+          });
+        }
+      } else {
+        // This is called when ICE gathering is complete
+        console.log(`ICE gathering completed for ${peerId}`);
       }
+    };
+
+    // Add ICE gathering state change handler
+    peerConnection.onicegatheringstatechange = () => {
+      console.log(`ICE gathering state changed to: ${peerConnection.iceGatheringState}`);
     };
 
     // Handle incoming tracks
@@ -518,7 +527,8 @@ const RoomDetail = () => {
                 elevation={3}
                 sx={{ 
                   width:  '200px',
-                  height:  '150px',
+                  height:  'auto',
+                  display:'flex',
                   borderRadius: 4,
                   overflow:'hidden',
                   position:'relative',
@@ -541,7 +551,8 @@ const RoomDetail = () => {
                 elevation={3}
                 sx={{ 
                   width:  '200px',
-                  height:  '150px',
+                  height: 'auto',
+                  display:'flex',
                   overflow:'hidden',
                   borderRadius: 4,
                   background: isDarkMode 
