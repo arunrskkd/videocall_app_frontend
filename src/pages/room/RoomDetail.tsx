@@ -61,6 +61,7 @@ interface RoomJoinedData {
 interface PeerConnection {
   peerId: string;
   connection: RTCPeerConnection;
+  iceCandidates: RTCIceCandidateInit[];
 }
 
 interface WebRTCOffer {
@@ -79,7 +80,6 @@ interface WebRTCIceCandidate {
 }
 
 const RoomDetail = () => {
-  const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const { isDarkMode, toggleDarkMode } = useCustomTheme();
 
@@ -93,15 +93,17 @@ const RoomDetail = () => {
 
   const params = new URLSearchParams(window.location.search);
   const username = params.get('name');
+  const { roomId } = useParams<{ roomId: string }>();
 
   const socket = useRef<any>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  const peerConnectionsRef = useRef<{ [key: string]: RTCPeerConnection }>({});
+  const peerConnectionsRef = useRef<{ [key: string]: PeerConnection }>({});
   const socketIdRef = useRef<string | null>(null);
 
   const createPeerConnection = (peerId: string) => {
+    console.log(`creating peer connection` )
     const peerConnection = new RTCPeerConnection({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -112,13 +114,18 @@ const RoomDetail = () => {
     // Add local stream tracks to peer connection
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => {
+        console.log(`adding video stream to connection` )
+
         peerConnection.addTrack(track, localStreamRef.current!);
       });
     }
 
     // Handle ICE candidates
     peerConnection.onicecandidate = (event) => {
+      console.log(`response from iceservers about public ip`)
+
       if (event.candidate) {
+        console.log(`public ip is sent to ${peerId}`)
         socket.current.emit('ice-candidate', {
           target: peerId,
           candidate: event.candidate
@@ -128,16 +135,26 @@ const RoomDetail = () => {
 
     // Handle incoming tracks
     peerConnection.ontrack = (event) => {
+      console.log(`outputs icoming  video to video box`)
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = event.streams[0];
       }
     };
 
-    peerConnectionsRef.current[peerId] = peerConnection;
+    // Store the connection and initialize ICE candidate queue
+    peerConnectionsRef.current[peerId] = {
+      peerId,
+      connection: peerConnection,
+      iceCandidates: []
+    };
+
     return peerConnection;
   };
 
+
+  // offer video stream req to other client with peerId
   const createOffer = async (peerId: string) => {
+    console.log(`creating offer to ${peerId} before that need connection to peer id` )
     const peerConnection = createPeerConnection(peerId);
     try {
       const offer = await peerConnection.createOffer();
@@ -152,14 +169,26 @@ const RoomDetail = () => {
   };
 
   const handleAnswer = async (peerId: string, answer: RTCSessionDescriptionInit) => {
-    const peerConnection = peerConnectionsRef.current[peerId];
-    if (peerConnection) {
+    const peerData = peerConnectionsRef.current[peerId];
+    if (peerData) {
       try {
         // Check if we're in the right state to set the remote description
-        if (peerConnection.signalingState === 'have-local-offer') {
-          await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        if (peerData.connection.signalingState === 'have-local-offer') {
+          await peerData.connection.setRemoteDescription(new RTCSessionDescription(answer));
+          
+          // Process any queued ICE candidates
+          while (peerData.iceCandidates.length > 0) {
+            const candidate = peerData.iceCandidates.shift();
+            if (candidate) {
+              try {
+                await peerData.connection.addIceCandidate(new RTCIceCandidate(candidate));
+              } catch (error) {
+                console.warn('Error adding queued ICE candidate:', error);
+              }
+            }
+          }
         } else {
-          console.warn('Cannot set remote description: wrong signaling state', peerConnection.signalingState);
+          console.warn('Cannot set remote description: wrong signaling state', peerData.connection.signalingState);
         }
       } catch (error) {
         console.error('Error setting remote description:', error);
@@ -168,22 +197,23 @@ const RoomDetail = () => {
   };
 
   const handleOffer = async (peerId: string, offer: RTCSessionDescriptionInit) => {
-    let peerConnection = peerConnectionsRef.current[peerId];
+    let peerData = peerConnectionsRef.current[peerId];
     
     // If we already have a connection, check its state
-    if (peerConnection) {
-      if (peerConnection.signalingState !== 'stable') {
-        console.warn('Connection exists but not in stable state:', peerConnection.signalingState);
+    if (peerData) {
+      if (peerData.connection.signalingState !== 'stable') {
+        console.warn('Connection exists but not in stable state:', peerData.connection.signalingState);
         return;
       }
     } else {
-      peerConnection = createPeerConnection(peerId);
+      const connection = createPeerConnection(peerId);
+      peerData = peerConnectionsRef.current[peerId];
     }
 
     try {
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
+      await peerData.connection.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await peerData.connection.createAnswer();
+      await peerData.connection.setLocalDescription(answer);
       socket.current.emit('answer', {
         target: peerId,
         answer
@@ -194,10 +224,19 @@ const RoomDetail = () => {
   };
 
   const handleIceCandidate = async (peerId: string, candidate: RTCIceCandidateInit) => {
-    const peerConnection = peerConnectionsRef.current[peerId];
-    if (peerConnection) {
+    const peerData = peerConnectionsRef.current[peerId];
+    if (peerData) {
       try {
-        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        // If remote description is not set, queue the candidate
+        if (!peerData.connection.remoteDescription) {
+          peerData.iceCandidates.push(candidate);
+          return;
+        }
+        
+        // Otherwise, add the candidate immediately
+        console.log(`connecting with other candidate`);
+        
+        await peerData.connection.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (error) {
         console.error('Error adding ICE candidate:', error);
       }
@@ -205,18 +244,22 @@ const RoomDetail = () => {
   };
 
   useEffect(() => {
+    const intFuc = async () => {
     socket.current = io(import.meta.env.VITE_SERVER_URL);
-    initializeLocalStream()
-    socket.current.on('connect', () => {
-      console.log('Connected to server');
+    
+     socket.current.on('connect', async() => {
+      await initializeLocalStream();
+
       socketIdRef.current = socket.current.id;
       
+      console.log("socket server connected with id" + socket.current.id);
       // Join the room
       socket.current.emit('join-room', { room: roomId, name: username });
+      console.log("sent req to join me to room");
     });
 
     socket.current.on('room-joined', (data: RoomJoinedData) => {
-      console.log('Joined room:', data);
+      console.log("server has addeded me to room");
       setRoomInfo(data);
       setIsConnected(true);
       setParticipants(data.users || []);
@@ -224,29 +267,31 @@ const RoomDetail = () => {
       // Create peer connections with existing participants
       data.users.forEach(user => {
         if (user.userId !== socketIdRef.current) {
+          console.log("sent offer to all other members for video chat");
           createOffer(user.userId);
         }
       });
     });
 
     socket.current.on('user-joined', (user: Participant) => {
-      console.log('User joined:', user);
+      console.log("one other member joined room");
       setParticipants(prev => [...prev, user]);
-      createOffer(user.userId);
+      // createOffer(user.userId);
     });
 
     socket.current.on('user-left', (user: Participant) => {
-      console.log('User left:', user);
+     
       setParticipants(prev => prev.filter(p => p.userId !== user.userId));
       
       // Close and remove peer connection
       if (peerConnectionsRef.current[user.userId]) {
-        peerConnectionsRef.current[user.userId].close();
+        peerConnectionsRef.current[user.userId].connection.close();
         delete peerConnectionsRef.current[user.userId];
       }
     });
 
     socket.current.on('offer', ({ from, offer }: WebRTCOffer) => {
+      console.log(`got an offer for video chat from ${from} offer${offer}` );
       handleOffer(from, offer);
     });
 
@@ -255,6 +300,7 @@ const RoomDetail = () => {
     });
 
     socket.current.on('ice-candidate', ({ from, candidate }: WebRTCIceCandidate) => {
+      console.log(`got an ip of other  for video  from ${from} offer${candidate}` );
       handleIceCandidate(from, candidate);
     });
 
@@ -262,21 +308,33 @@ const RoomDetail = () => {
       setChatMessages(prev => [...prev, message]);
     });
 
-    return () => {
-      if (socket.current) {
-        socket.current.disconnect();
-      }
+   
+  };
+
+  if(!localStreamRef.current){
+    intFuc();
+  }
+
+
+  return () => {
+    if (socket.current) {
+      socket.current.disconnect();
+    }
+    
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => {
+        track.stop();
       
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => track.stop());
-      }
-      
-      // Close all peer connections
-      Object.values(peerConnectionsRef.current).forEach(connection => {
-        connection.close();
       });
-    };
-  }, [roomId]);
+    }
+    
+    // Close all peer connections
+    Object.values(peerConnectionsRef.current).forEach(peerData => {
+      peerData.connection.close();
+   
+    });
+  };
+  }, []);
 
   const handleToggleAudio = () => {
     if (localStreamRef.current) {
@@ -301,15 +359,33 @@ const RoomDetail = () => {
   const initializeLocalStream = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 }
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 2
+        }
       });
+      
+
       
       localStreamRef.current = stream;
       
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
       }
+
+      await new Promise((res) => {
+        setTimeout(() => {
+          res('true')
+        }, 1000);
+      })
+
     } catch (error) {
       console.error('Error accessing media devices:', error);
       alert('Failed to access camera and microphone. Please check permissions.');
@@ -445,13 +521,14 @@ const RoomDetail = () => {
                   height:  '150px',
                   borderRadius: 4,
                   overflow:'hidden',
+                  position:'relative',
                   background: isDarkMode 
                     ? 'linear-gradient(145deg, #1e1e1e 0%, #2d2d2d 100%)'
                     : 'linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%)',
 
                 }}
               >
-               
+                  <Typography sx={{position:'absolute', top:10 , left:10}} fontSize='12px'>You</Typography>
                   <video ref={localVideoRef} autoPlay muted playsInline width={"100%"}/>
               
               </Paper>
@@ -473,6 +550,7 @@ const RoomDetail = () => {
 
                 }}
               >
+                {/* <Typography>You</Typography> */}
                 <video ref={remoteVideoRef} autoPlay playsInline width={"100%"}/>
               </Paper>
             </Grid>
